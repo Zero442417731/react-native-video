@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Matrix;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -83,6 +84,7 @@ public class ReactVideoView extends ScalableVideoView implements MediaPlayer.OnP
     public static final String EVENT_PROP_WIDTH = "width";
     public static final String EVENT_PROP_HEIGHT = "height";
     public static final String EVENT_PROP_ORIENTATION = "orientation";
+    public static final String EVENT_PROP_ROTATION = "rotation";
 
     public static final String EVENT_PROP_ERROR = "error";
     public static final String EVENT_PROP_WHAT = "what";
@@ -226,7 +228,7 @@ public class ReactVideoView extends ScalableVideoView implements MediaPlayer.OnP
     }
 
     public void setSrc(final String uriString, final String type, final boolean isNetwork, final boolean isAsset, final ReadableMap requestHeaders, final int expansionMainVersion, final int expansionPatchVersion) {
-
+        Log.d("setSrc", "uri: " + uriString + "," + Uri.parse(uriString).getPath());
         mSrcUriString = uriString;
         mSrcType = type;
         mSrcIsNetwork = isNetwork;
@@ -505,6 +507,17 @@ public class ReactVideoView extends ScalableVideoView implements MediaPlayer.OnP
     @Override
     public void onPrepared(MediaPlayer mp) {
 
+        String rotation = "-1";
+        try {
+            HashMap<String, String> headers = new HashMap<>();
+            headers.put("User-Agent", "Mozilla/5.0 (Linux; U; Android 4.4.2; zh-CN; MW-KW-001 Build/JRO03C) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 UCBrowser/1.0.0.001 U4/0.8.0 Mobile Safari/533.1");
+            MediaMetadataRetriever retr = new MediaMetadataRetriever();
+            retr.setDataSource(mSrcUriString, headers);
+            rotation = retr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
+        } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+        }
+
         mMediaPlayerValid = true;
         mVideoDuration = mp.getDuration();
 
@@ -515,6 +528,9 @@ public class ReactVideoView extends ScalableVideoView implements MediaPlayer.OnP
             naturalSize.putString(EVENT_PROP_ORIENTATION, "landscape");
         else
             naturalSize.putString(EVENT_PROP_ORIENTATION, "portrait");
+        if ("-1".equals(rotation)) {
+            naturalSize.putInt(EVENT_PROP_ROTATION, Integer.valueOf(rotation));
+        }
 
         WritableMap event = Arguments.createMap();
         event.putDouble(EVENT_PROP_DURATION, mVideoDuration / 1000.0);
